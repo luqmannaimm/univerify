@@ -137,9 +137,6 @@ class SplayTree:
     def _splay(self, root: Optional[SplayNode], key: int) -> Optional[SplayNode]:
         """
         Bring the node with the given key to the root of the subtree.
-        The function returns the new subtree root after performing the
-        necessary rotations. If the key is not present, the last accessed
-        node (closest to the key) will be splayed to the root instead.
         """
 
         # Base case where root is None or key is at root
