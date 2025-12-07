@@ -218,14 +218,17 @@ class SplayTree:
         Search for a document by id. If found, splay to root and return it.
         Returns the Document instance or None if not found.
         """
+        
         # If tree is empty nothing to do
         if not self.root:
             return None
+        
         # Bring the nearest node with respect to doc_id to the root
         self.root = self._splay(self.root, doc_id)
         if self.root.doc.doc_id == doc_id:
             print(f"\nFound and Splayed: {self.root.doc}")
             return self.root.doc
+        
         # If the root's key differs, the document doesn't exist
         print("Document not found.")
         return None
@@ -354,7 +357,7 @@ class UniverifyApp:
         def sep():
             """Separator line for the table"""
             print("+" + "+".join(["-" * (w + 2) for w in col_widths]) + "+")
-            
+
         # Create rows
         def row(vals):
             """A single row of the table"""
