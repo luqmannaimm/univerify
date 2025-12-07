@@ -96,8 +96,13 @@ class SplayTree:
              / \
             T2  T3
         """
+        # Perform right rotation
         y = x.left
+
+        # Adjust pointers
         x.left = y.right
+
+        # Complete rotation
         y.right = x
         return y
 
@@ -119,8 +124,13 @@ class SplayTree:
          / \
         T1  T2
         """
+        # Perform left rotation
         y = x.right
+
+        # Adjust pointers
         x.right = y.left
+
+        # Complete rotation
         y.left = x
         return y
 
@@ -226,8 +236,8 @@ class SplayTree:
         if self.root.doc.doc_id == doc_id:
             print(f"\nFound and Splayed: {self.root.doc}")
             return self.root.doc
-        
-        # If the root's key differs, the document doesn't exist
+
+        # If the root key differs, the document does not exist
         print("Document not found.")
         return None
 
@@ -310,9 +320,12 @@ class UniverifyApp:
         """
         Helper function to return a sorted list of rows (doc_id, applicant_id, doc_type, status)
         """
+        # Load all JSON files from data directory
         rows: List[Tuple[int, str, str, str]] = []
         if not os.path.isdir(self.data_dir):
             return rows
+        
+        # Iterate over files in data directory
         for name in sorted(os.listdir(self.data_dir)):
             if not name.lower().endswith('.json'):
                 continue
