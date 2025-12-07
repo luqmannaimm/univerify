@@ -288,10 +288,7 @@ class UniverifyApp:
     """
     Main Application Class
     ======================
-      - Manages data storage
-      - Maintain the data folder where each document is a JSON file
-      - Keep an in-memory splay tree for fast operations
-      - Provide simple user interface to interact with data
+      - List, Search, Insert, Update, Delete documents in the splay tree
     """
 
     def __init__(self, data_dir: str = None):
@@ -307,19 +304,13 @@ class UniverifyApp:
 
     def _file_path(self, doc_id: int) -> str:
         """
-        Get JSON file path
+        Helper function to get JSON file path
         """
         return os.path.join(self.data_dir, f"{doc_id}.json")
 
-    def ensure_data_dir(self) -> None:
+    def _load_all(self) -> List[Tuple[int, str, str, str]]:
         """
-        Create data directory if it doesn't exist
-        """
-        os.makedirs(self.data_dir, exist_ok=True)
-
-    def load_all(self) -> List[Tuple[int, str, str, str]]:
-        """
-        Return a sorted list of rows (doc_id, applicant_id, doc_type, status)
+        Helper function to return a sorted list of rows (doc_id, applicant_id, doc_type, status)
         """
         rows: List[Tuple[int, str, str, str]] = []
         if not os.path.isdir(self.data_dir):
@@ -337,19 +328,6 @@ class UniverifyApp:
                 continue
         return rows
 
-    def preload_tree(self) -> None:
-        """
-        Load documents from disk and insert into the splay tree
-        """
-
-        # Ensure data directory exists
-        self.ensure_data_dir()
-
-        # Load all documents and insert into tree
-        rows = self.load_all()
-        for r in rows:
-            self.tree.insert(Document(*r))
-
     def list_documents(self) -> None:
         """
         Choice 1: List Documents
@@ -357,7 +335,7 @@ class UniverifyApp:
         """
 
         # Load all documents from disk
-        rows = self.load_all()
+        rows = self._load_all()
 
         # Print the available documents
         print("\nAvailable documents (from folder):")
@@ -372,15 +350,17 @@ class UniverifyApp:
         cols = list(zip(*([headers] + [tuple(str(x) for x in r) for r in rows])))
         col_widths = [max(len(v) for v in c) for c in cols]
 
+        # Create separators
         def sep():
             """Separator line for the table"""
             print("+" + "+".join(["-" * (w + 2) for w in col_widths]) + "+")
-
+            
+        # Create rows
         def row(vals):
             """A single row of the table"""
             print("| " + " | ".join(v.ljust(w) for v, w in zip(vals, col_widths)) + " |")
 
-        # Print the header and rows
+        # Print the table
         sep()
         row(headers)
         sep()
@@ -459,7 +439,10 @@ class UniverifyApp:
         """
 
         # Preload the tree from data folder
-        self.preload_tree()
+        os.makedirs(self.data_dir, exist_ok=True)
+        rows = self._load_all()
+        for r in rows:
+            self.tree.insert(Document(*r))
 
         # List initial documents
         self.list_documents()
