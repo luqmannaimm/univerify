@@ -183,24 +183,21 @@ class SplayTree:
         Insert a Document into the tree.
         Returns True if inserted, False if a document with the same id exists.
         """
+
         # Empty tree: new node becomes root without rotations
         if self.root is None:
             self.root = SplayNode(doc)
             print(f"Inserted root: {doc.doc_id}")
             return True
 
-        # Splay at the key so the tree reorganizes around where the key
-        # would be. If the key is present, it ends up at root.
+        # Splay at the key
         self.root = self._splay(self.root, doc.doc_id)
         if self.root.doc.doc_id == doc.doc_id:
             print(f"Document {doc.doc_id} already exists. Update or Search instead.")
             return False
 
+        # Insert new node and reattach subtrees
         node = SplayNode(doc)
-        # Attach the split trees appropriately.
-        # If new key is less than current root's key, it becomes the new
-        # root and adopts the current root as its right child. The current
-        # root's left subtree becomes the new node's left child.
         if doc.doc_id < self.root.doc.doc_id:
             node.right = self.root
             node.left = self.root.left
@@ -210,6 +207,7 @@ class SplayTree:
             node.right = self.root.right
             self.root.right = None
         self.root = node
+
         print(f"Inserted and Splayed to root: {doc.doc_id}")
         return True
 
@@ -218,7 +216,7 @@ class SplayTree:
         Search for a document by id. If found, splay to root and return it.
         Returns the Document instance or None if not found.
         """
-        
+
         # If tree is empty nothing to do
         if not self.root:
             return None
