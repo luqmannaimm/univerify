@@ -250,21 +250,18 @@ class SplayTree:
         Remove a document from the tree.
         Returns True when a node was removed; False otherwise.
         """
+
         # If tree empty nothing to delete
         if self.root is None:
             return False
-        # Splay the tree at doc_id. If present, the node to delete will
-        # be at the root after splaying.
+        
+        # Splay the tree at doc_id if document found
         self.root = self._splay(self.root, doc_id)
         if self.root.doc.doc_id != doc_id:
             print("Document not found, cannot delete.")
             return False
 
-        # Delete the root node. Re-attach subtrees carefully:
-        # - If there's no left subtree, right subtree becomes root.
-        # - Otherwise, make the left subtree the root and attach the
-        #   previous right subtree as its right child after splaying the
-        #   left subtree so that its maximum becomes the root.
+        # Delete the root node and re-attach subtrees
         if self.root.left is None:
             self.root = self.root.right
         else:
