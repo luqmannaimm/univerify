@@ -305,17 +305,17 @@ class UniverifyApp:
         # Initialize the splay tree
         self.tree = SplayTree()
 
-    def ensure_data_dir(self) -> None:
-        """
-        Create data directory if it doesn't exist
-        """
-        os.makedirs(self.data_dir, exist_ok=True)
-
     def _file_path(self, doc_id: int) -> str:
         """
         Get JSON file path
         """
         return os.path.join(self.data_dir, f"{doc_id}.json")
+
+    def ensure_data_dir(self) -> None:
+        """
+        Create data directory if it doesn't exist
+        """
+        os.makedirs(self.data_dir, exist_ok=True)
 
     def load_all(self) -> List[Tuple[int, str, str, str]]:
         """
@@ -337,66 +337,9 @@ class UniverifyApp:
                 continue
         return rows
 
-    def save_document(self, doc: Document) -> None:
-        """
-        Persist a single Document as JSON to the data folder
-        """
-
-        # Get file path
-        fp = self._file_path(doc.doc_id)
-
-        # Write the JSON file to data folder
-        with open(fp, 'w', encoding='utf-8') as f:
-            json.dump(doc.to_dict(), f, indent=2)
-
-    def remove_document_file(self, doc_id: int) -> None:
-        """
-        Remove the JSON file for a document if it exists
-        """
-
-        # Get file path
-        fp = self._file_path(doc_id)
-
-        # Remove the file if it exists
-        if os.path.exists(fp):
-            os.remove(fp)
-
-    def print_table(self, rows: List[Tuple[int, str, str, str]]) -> None:
-        """
-        Print a small table of the document database
-        """
-
-        # Create headers
-        headers = ["Doc ID", "Applicant ID", "Type", "Status"]
-
-        # Calculate column widths
-        if not rows:
-            cols = [tuple(headers)]
-        else:
-            cols = list(zip(*([headers] + [tuple(str(x) for x in r) for r in rows])))
-        col_widths = [max(len(v) for v in c) for c in cols]
-
-        def sep():
-            """Separator line for the table"""
-            print("+" + "+".join(["-" * (w + 2) for w in col_widths]) + "+")
-
-        def row(vals):
-            """A single row of the table"""
-            print("| " + " | ".join(v.ljust(w) for v, w in zip(vals, col_widths)) + " |")
-
-        # Print the header
-        sep()
-        row(headers)
-        sep()
-
-        # Print the rows
-        for r in rows:
-            row([str(r[0]), str(r[1]), str(r[2]), str(r[3])])
-        sep()
-
     def preload_tree(self) -> None:
         """
-        Load documents from disk and insert into the in-memory splay tree
+        Load documents from disk and insert into the splay tree
         """
 
         # Ensure data directory exists
@@ -409,7 +352,8 @@ class UniverifyApp:
 
     def list_documents(self) -> None:
         """
-        Print the table of documents currently in the data folder
+        Choice 1: List Documents
+        Load documents from disk and print a small table of the document database.
         """
 
         # Load all documents from disk
@@ -417,39 +361,74 @@ class UniverifyApp:
 
         # Print the available documents
         print("\nAvailable documents (from folder):")
-        if rows:
-            self.print_table(rows)
-        else:
+        if not rows:
             print("No documents found!")
+            return
+
+        # Create headers
+        headers = ["Doc ID", "Applicant ID", "Type", "Status"]
+
+        # Calculate column widths
+        cols = list(zip(*([headers] + [tuple(str(x) for x in r) for r in rows])))
+        col_widths = [max(len(v) for v in c) for c in cols]
+
+        def sep():
+            """Separator line for the table"""
+            print("+" + "+".join(["-" * (w + 2) for w in col_widths]) + "+")
+
+        def row(vals):
+            """A single row of the table"""
+            print("| " + " | ".join(v.ljust(w) for v, w in zip(vals, col_widths)) + " |")
+
+        # Print the header and rows
+        sep()
+        row(headers)
+        sep()
+        for r in rows:
+            row([str(r[0]), str(r[1]), str(r[2]), str(r[3])])
+        sep()
 
     def search_document(self, doc_id: int) -> Optional[Document]:
         """
+        Choice 2: Search Document
         Search for a document in the in-memory tree and return it
         """
         return self.tree.search(doc_id)
 
     def insert_document(self, doc: Document) -> bool:
         """
+        Choice 3: Insert Document
         Insert a new document into the tree and save to data folder.
         Returns True on success, False if a document with the same id exists.
         """
         ok = self.tree.insert(doc)
         if ok:
             try:
-                self.save_document(doc)
+                # Get file path
+                fp = self._file_path(doc.doc_id)
+
+                # Write the JSON file to data folder
+                with open(fp, 'w', encoding='utf-8') as f:
+                    json.dump(doc.to_dict(), f, indent=2)
                 print(f"Saved document to {self._file_path(doc.doc_id)}")
             except Exception as e:
                 print(f"Failed to save file: {e}")
         return ok
 
-    def update_document_status(self, doc_id: int, status: str) -> Optional[Document]:
+    def update_document(self, doc_id: int, status: str) -> Optional[Document]:
         """
+        Choice 4: Update Document
         Update a document's status and save the changes.
         """
         doc = self.tree.update_status(doc_id, status)
         if doc:
             try:
-                self.save_document(doc)
+                # Get file path
+                fp = self._file_path(doc.doc_id)
+
+                # Write the JSON file to data folder
+                with open(fp, 'w', encoding='utf-8') as f:
+                    json.dump(doc.to_dict(), f, indent=2)
                 print(f"Updated file {self._file_path(doc_id)}")
             except Exception as e:
                 print(f"Failed to update file: {e}")
@@ -457,13 +436,19 @@ class UniverifyApp:
 
     def delete_document(self, doc_id: int) -> bool:
         """
-        Delete a document from the in-memory tree and remove the file.
+        Choice 5: Delete Document
+        Delete a document from tree and remove the file.
         """
         ok = self.tree.delete(doc_id)
         if ok:
             try:
-                self.remove_document_file(doc_id)
-                print(f"Removed file {self._file_path(doc_id)}")
+                # Get file path
+                fp = self._file_path(doc_id)
+
+                # Delete the file from disk
+                if os.path.exists(fp):
+                    os.remove(fp)
+                print(f"Removed file {fp}")
             except Exception as e:
                 print(f"Failed to remove file: {e}")
         return ok
@@ -513,7 +498,7 @@ class UniverifyApp:
                 try:
                     did = int(input("Update Doc ID: "))
                     status = input("New Status (new/pending/verified): ")
-                    self.update_document_status(did, status)
+                    self.update_document(did, status)
                 except ValueError:
                     print("Invalid ID.")
 
