@@ -1,2 +1,3 @@
-# univerify
-University Document Verification Application
+To run application:
+
+python univerify.py

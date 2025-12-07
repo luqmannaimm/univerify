@@ -1,0 +1,545 @@
+"""
+Univerify Application
+=====================
+Description: A simple document verification system using a splay tree
+Author: Luqman Naim bin Mohd Esa
+Email: luqmannaim@graduate.utm.my
+"""
+
+import os
+import json
+from typing import List, Optional, Tuple
+
+class Document:
+    """
+    Document Metadata Class
+    =======================
+      - doc_id: unique document identifier used as the tree key.
+      - applicant_id: short identifier for the applicant.
+      - doc_type: file type string ("pdf", "doc").
+      - status: verification state (new", "pending", "verified").
+    """
+
+    def __init__(self, doc_id: int, applicant_id: str, doc_type: str, status: str = "new"):
+        """
+        Initialize a document instance.
+        """
+        self.doc_id = doc_id
+        self.applicant_id = applicant_id
+        self.doc_type = doc_type
+        self.status = status
+
+    def to_dict(self) -> dict:
+        """
+        Convert document to dictionary for JSON serialization.
+        """
+        return {
+            "doc_id": self.doc_id,
+            "applicant_id": self.applicant_id,
+            "doc_type": self.doc_type,
+            "status": self.status,
+        }
+
+    def __repr__(self) -> str:
+        """
+        String representation of the document.
+        """
+        doc_repr = f"\n-------------------\n"
+        doc_repr += f"Document ID: {self.doc_id}\n"
+        doc_repr += f"Applicant ID: {self.applicant_id}\n"
+        doc_repr += f"Document Type: {self.doc_type}\n"
+        doc_repr += f"Document Status: {self.status}\n"
+        doc_repr += f"-------------------\n"
+        return doc_repr
+
+
+class SplayNode:
+    """
+    SplayNode Class
+    ===============
+      - A node in the splay tree that wraps a document
+    """
+
+    def __init__(self, document: Document):
+        self.doc = document
+        self.left: Optional["SplayNode"] = None
+        self.right: Optional["SplayNode"] = None
+
+
+class SplayTree:
+    """
+    SplayTree Class
+    ===============
+      - Zig (single rotation when parent is root)
+      - Zig-Zig (two rotations when node and parent are both left or both right children of their parents)
+      - Zig-Zag (two rotations when node and parent are opposite-side children)
+    """
+
+    def __init__(self):
+        self.root: Optional[SplayNode] = None
+
+    def _right_rotate(self, x: SplayNode) -> SplayNode:
+        """
+        Right rotation around node x.
+
+        Before rotation:
+            x
+           / \
+          y  T3
+         / \
+        T1  T2
+
+        After rotation:
+            y
+           / \
+         T1   x
+             / \
+            T2  T3
+        """
+        y = x.left
+        x.left = y.right
+        y.right = x
+        return y
+
+    def _left_rotate(self, x: SplayNode) -> SplayNode:
+        """
+        Left rotation around node x.
+
+        Before rotation:
+            x
+           / \
+          T1  y
+             / \
+            T2  T3
+
+        After rotation:
+            y
+           / \
+          x   T3
+         / \
+        T1  T2
+        """
+        y = x.right
+        x.right = y.left
+        y.left = x
+        return y
+
+    def _splay(self, root: Optional[SplayNode], key: int) -> Optional[SplayNode]:
+        """
+        Bring the node with the given key to the root of the subtree.
+        The function returns the new subtree root after performing the
+        necessary rotations. If the key is not present, the last accessed
+        node (closest to the key) will be splayed to the root instead.
+        """
+
+        # Base case where root is None or key is at root
+        if root is None or root.doc.doc_id == key:
+            return root
+
+        # Key lies in left subtree
+        if key < root.doc.doc_id:
+
+            # Key not found in left subtree
+            if root.left is None:
+                return root
+            
+            # Zig-Zig (Left Left): bring key up twice, then rotate right
+            if key < root.left.doc.doc_id:
+                root.left.left = self._splay(root.left.left, key)
+                root = self._right_rotate(root)
+
+            # Zig-Zag (Left Right): rotate left on left child, then right on root
+            elif key > root.left.doc.doc_id:
+                root.left.right = self._splay(root.left.right, key)
+                if root.left.right is not None:
+                    root.left = self._left_rotate(root.left)
+
+            # Final rotation brings the node upward
+            return self._right_rotate(root) if root.left else root
+
+        # Key lies in right subtree
+        else:
+
+            # Key not found in right subtree
+            if root.right is None:
+                return root
+            
+            # Zag-Zig (Right Left): rotate right on right child, then left on root
+            if key < root.right.doc.doc_id:
+                root.right.left = self._splay(root.right.left, key)
+                if root.right.left is not None:
+                    root.right = self._right_rotate(root.right)
+
+            # Zag-Zag (Right Right): bring key up twice, then rotate left
+            elif key > root.right.doc.doc_id:
+                root.right.right = self._splay(root.right.right, key)
+                root = self._left_rotate(root)
+
+            # Final rotation brings the node upward
+            return self._left_rotate(root) if root.right else root
+
+    def insert(self, doc: Document) -> bool:
+        """
+        Insert a Document into the tree.
+        Returns True if inserted, False if a document with the same id exists.
+        """
+        # Empty tree: new node becomes root without rotations
+        if self.root is None:
+            self.root = SplayNode(doc)
+            print(f"Inserted root: {doc.doc_id}")
+            return True
+
+        # Splay at the key so the tree reorganizes around where the key
+        # would be. If the key is present, it ends up at root.
+        self.root = self._splay(self.root, doc.doc_id)
+        if self.root.doc.doc_id == doc.doc_id:
+            print(f"Document {doc.doc_id} already exists. Update or Search instead.")
+            return False
+
+        node = SplayNode(doc)
+        # Attach the split trees appropriately.
+        # If new key is less than current root's key, it becomes the new
+        # root and adopts the current root as its right child. The current
+        # root's left subtree becomes the new node's left child.
+        if doc.doc_id < self.root.doc.doc_id:
+            node.right = self.root
+            node.left = self.root.left
+            self.root.left = None
+        else:
+            node.left = self.root
+            node.right = self.root.right
+            self.root.right = None
+        self.root = node
+        print(f"Inserted and Splayed to root: {doc.doc_id}")
+        return True
+
+    def search(self, doc_id: int) -> Optional[Document]:
+        """
+        Search for a document by id. If found, splay to root and return it.
+        Returns the Document instance or None if not found.
+        """
+        # If tree is empty nothing to do
+        if not self.root:
+            return None
+        # Bring the nearest node with respect to doc_id to the root
+        self.root = self._splay(self.root, doc_id)
+        if self.root.doc.doc_id == doc_id:
+            print(f"\nFound and Splayed: {self.root.doc}")
+            return self.root.doc
+        # If the root's key differs, the document doesn't exist
+        print("Document not found.")
+        return None
+
+    def update_status(self, doc_id: int, new_status: str) -> Optional[Document]:
+        """
+        Update the status field of the document (in-memory) and return it.
+        The caller is responsible for persisting the change to disk.
+        """
+        # Reuse search (which splays the node if it exists), update the
+        # in-memory Document and return it so callers can persist changes.
+        doc = self.search(doc_id)
+        if doc:
+            doc.status = new_status
+            print(f"Updated Status to '{new_status}' for Document {doc_id}")
+            return doc
+        return None
+
+    def delete(self, doc_id: int) -> bool:
+        """
+        Remove a document from the tree.
+        Returns True when a node was removed; False otherwise.
+        """
+        # If tree empty nothing to delete
+        if self.root is None:
+            return False
+        # Splay the tree at doc_id. If present, the node to delete will
+        # be at the root after splaying.
+        self.root = self._splay(self.root, doc_id)
+        if self.root.doc.doc_id != doc_id:
+            print("Document not found, cannot delete.")
+            return False
+
+        # Delete the root node. Re-attach subtrees carefully:
+        # - If there's no left subtree, right subtree becomes root.
+        # - Otherwise, make the left subtree the root and attach the
+        #   previous right subtree as its right child after splaying the
+        #   left subtree so that its maximum becomes the root.
+        if self.root.left is None:
+            self.root = self.root.right
+        else:
+            temp = self.root.right
+            self.root = self.root.left
+            self.root = self._splay(self.root, doc_id)
+            self.root.right = temp
+        print(f"Deleted Document {doc_id}")
+        return True
+
+    def display_root(self) -> None:
+        """
+        Print a short representation of the current root (or empty).
+        """
+        if self.root:
+            print(f"Current Root: {self.root.doc}")
+        else:
+            print("Tree is empty.")
+
+
+class UniverifyApp:
+    """
+    Main Application Class
+    ======================
+      - Manages data storage
+      - Maintain the data folder where each document is a JSON file
+      - Keep an in-memory splay tree for fast operations
+      - Provide simple user interface to interact with data
+    """
+
+    def __init__(self, data_dir: str = None):
+        """
+        Initialize data directory and splay tree
+        """
+
+        # Set data directory (default: ./data)
+        self.data_dir = data_dir or os.path.join(os.path.dirname(__file__), "data")
+
+        # Initialize the splay tree
+        self.tree = SplayTree()
+
+    def ensure_data_dir(self) -> None:
+        """
+        Create data directory if it doesn't exist
+        """
+        os.makedirs(self.data_dir, exist_ok=True)
+
+    def _file_path(self, doc_id: int) -> str:
+        """
+        Get JSON file path
+        """
+        return os.path.join(self.data_dir, f"{doc_id}.json")
+
+    def load_all(self) -> List[Tuple[int, str, str, str]]:
+        """
+        Return a sorted list of rows (doc_id, applicant_id, doc_type, status)
+        """
+        rows: List[Tuple[int, str, str, str]] = []
+        if not os.path.isdir(self.data_dir):
+            return rows
+        for name in sorted(os.listdir(self.data_dir)):
+            if not name.lower().endswith('.json'):
+                continue
+            fp = os.path.join(self.data_dir, name)
+            try:
+                with open(fp, 'r', encoding='utf-8') as f:
+                    obj = json.load(f)
+                    rows.append((int(obj.get('doc_id')), str(obj.get('applicant_id')), str(obj.get('doc_type')), str(obj.get('status'))))
+            except Exception:
+                # Skip malformed files instead of crashing the app
+                continue
+        return rows
+
+    def save_document(self, doc: Document) -> None:
+        """
+        Persist a single Document as JSON to the data folder
+        """
+
+        # Get file path
+        fp = self._file_path(doc.doc_id)
+
+        # Write the JSON file to data folder
+        with open(fp, 'w', encoding='utf-8') as f:
+            json.dump(doc.to_dict(), f, indent=2)
+
+    def remove_document_file(self, doc_id: int) -> None:
+        """
+        Remove the JSON file for a document if it exists
+        """
+
+        # Get file path
+        fp = self._file_path(doc_id)
+
+        # Remove the file if it exists
+        if os.path.exists(fp):
+            os.remove(fp)
+
+    def print_table(self, rows: List[Tuple[int, str, str, str]]) -> None:
+        """
+        Print a small table of the document database
+        """
+
+        # Create headers
+        headers = ["Doc ID", "Applicant ID", "Type", "Status"]
+
+        # Calculate column widths
+        if not rows:
+            cols = [tuple(headers)]
+        else:
+            cols = list(zip(*([headers] + [tuple(str(x) for x in r) for r in rows])))
+        col_widths = [max(len(v) for v in c) for c in cols]
+
+        def sep():
+            """Separator line for the table"""
+            print("+" + "+".join(["-" * (w + 2) for w in col_widths]) + "+")
+
+        def row(vals):
+            """A single row of the table"""
+            print("| " + " | ".join(v.ljust(w) for v, w in zip(vals, col_widths)) + " |")
+
+        # Print the header
+        sep()
+        row(headers)
+        sep()
+
+        # Print the rows
+        for r in rows:
+            row([str(r[0]), str(r[1]), str(r[2]), str(r[3])])
+        sep()
+
+    def preload_tree(self) -> None:
+        """
+        Load documents from disk and insert into the in-memory splay tree
+        """
+
+        # Ensure data directory exists
+        self.ensure_data_dir()
+
+        # Load all documents and insert into tree
+        rows = self.load_all()
+        for r in rows:
+            self.tree.insert(Document(*r))
+
+    def list_documents(self) -> None:
+        """
+        Print the table of documents currently in the data folder
+        """
+
+        # Load all documents from disk
+        rows = self.load_all()
+
+        # Print the available documents
+        print("\nAvailable documents (from folder):")
+        if rows:
+            self.print_table(rows)
+        else:
+            print("No documents found!")
+
+    def search_document(self, doc_id: int) -> Optional[Document]:
+        """
+        Search for a document in the in-memory tree and return it
+        """
+        return self.tree.search(doc_id)
+
+    def insert_document(self, doc: Document) -> bool:
+        """
+        Insert a new document into the tree and save to data folder.
+        Returns True on success, False if a document with the same id exists.
+        """
+        ok = self.tree.insert(doc)
+        if ok:
+            try:
+                self.save_document(doc)
+                print(f"Saved document to {self._file_path(doc.doc_id)}")
+            except Exception as e:
+                print(f"Failed to save file: {e}")
+        return ok
+
+    def update_document_status(self, doc_id: int, status: str) -> Optional[Document]:
+        """
+        Update a document's status and save the changes.
+        """
+        doc = self.tree.update_status(doc_id, status)
+        if doc:
+            try:
+                self.save_document(doc)
+                print(f"Updated file {self._file_path(doc_id)}")
+            except Exception as e:
+                print(f"Failed to update file: {e}")
+        return doc
+
+    def delete_document(self, doc_id: int) -> bool:
+        """
+        Delete a document from the in-memory tree and remove the file.
+        """
+        ok = self.tree.delete(doc_id)
+        if ok:
+            try:
+                self.remove_document_file(doc_id)
+                print(f"Removed file {self._file_path(doc_id)}")
+            except Exception as e:
+                print(f"Failed to remove file: {e}")
+        return ok
+
+    def run(self) -> None:
+        """
+        Run the user interface loop.
+        """
+
+        # Preload the tree from data folder
+        self.preload_tree()
+
+        # List initial documents
+        self.list_documents()
+
+        # User interface
+        while True:
+            print("\nOptions: 1. List  2. Search  3. Insert  4. Update  5. Delete  6. Exit")
+            choice = input("Enter choice: ")
+
+            # List documents
+            if choice == '1':
+                self.list_documents()
+
+            # Search document
+            elif choice == '2':
+                try:
+                    did = int(input("Search Doc ID: "))
+                    self.search_document(did)
+                    self.tree.display_root()
+                except ValueError:
+                    print("Invalid ID.")
+
+            # Insert document
+            elif choice == '3':
+                try:
+                    did = int(input("Doc ID: "))
+                    aid = input("Applicant ID: ")
+                    dtype = input("Type (pdf/doc): ")
+                    doc = Document(did, aid, dtype)
+                    self.insert_document(doc)
+                except ValueError:
+                    print("Invalid input.")
+
+            # Update document
+            elif choice == '4':
+                try:
+                    did = int(input("Update Doc ID: "))
+                    status = input("New Status (new/pending/verified): ")
+                    self.update_document_status(did, status)
+                except ValueError:
+                    print("Invalid ID.")
+
+            # Delete document
+            elif choice == '5':
+                try:
+                    did = int(input("Delete Doc ID: "))
+                    self.delete_document(did)
+                except ValueError:
+                    print("Invalid ID.")
+
+            # Exit application
+            elif choice == '6':
+                print("Exiting.")
+                break
+
+            # Unknown choice
+            else:
+                print("Unknown choice.")
+
+def main():
+    """
+    Main entry point for the Univerify application    
+    """
+    app = UniverifyApp()
+    app.run()
+
+if __name__ == "__main__":
+    main()
