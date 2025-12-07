@@ -153,12 +153,12 @@ class SplayTree:
             if root.left is None:
                 return root
             
-            # Zig-Zig (Left Left): bring key up twice, then rotate right
+            # Zig-Zig (Left Left): if node is on left of parent
             if key < root.left.doc.doc_id:
                 root.left.left = self._splay(root.left.left, key)
                 root = self._right_rotate(root)
 
-            # Zig-Zag (Left Right): rotate left on left child, then right on root
+            # Zig-Zag (Left Right): if node is on right of parent
             elif key > root.left.doc.doc_id:
                 root.left.right = self._splay(root.left.right, key)
                 if root.left.right is not None:
@@ -174,13 +174,13 @@ class SplayTree:
             if root.right is None:
                 return root
             
-            # Zag-Zig (Right Left): rotate right on right child, then left on root
+            # Zag-Zig (Right Left): if node is on left of parent
             if key < root.right.doc.doc_id:
                 root.right.left = self._splay(root.right.left, key)
                 if root.right.left is not None:
                     root.right = self._right_rotate(root.right)
 
-            # Zag-Zag (Right Right): bring key up twice, then rotate left
+            # Zag-Zag (Right Right): if node is on right of parent
             elif key > root.right.doc.doc_id:
                 root.right.right = self._splay(root.right.right, key)
                 root = self._left_rotate(root)
