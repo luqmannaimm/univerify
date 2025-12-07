@@ -235,8 +235,10 @@ class SplayTree:
         """
         Update the status field of the document and return it.
         """
-        # Reuse search which splays the node if it exists and update the document
+        # Reuse search which splays the node if it exists
         doc = self.search(doc_id)
+
+        # Update status if document found
         if doc:
             doc.status = new_status
             print(f"Updated Status to '{new_status}' for Document {doc_id}")
