@@ -233,11 +233,9 @@ class SplayTree:
 
     def update_status(self, doc_id: int, new_status: str) -> Optional[Document]:
         """
-        Update the status field of the document (in-memory) and return it.
-        The caller is responsible for persisting the change to disk.
+        Update the status field of the document and return it.
         """
-        # Reuse search (which splays the node if it exists), update the
-        # in-memory Document and return it so callers can persist changes.
+        # Reuse search which splays the node if it exists and update the document
         doc = self.search(doc_id)
         if doc:
             doc.status = new_status
