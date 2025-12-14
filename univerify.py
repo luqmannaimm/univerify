@@ -8,7 +8,10 @@ Email: luqmannaim@graduate.utm.my
 
 import os
 import json
+import argparse
 from typing import List, Optional, Tuple
+from trees import splay, avl
+
 
 class Document:
     """
@@ -52,260 +55,27 @@ class Document:
         doc_repr += f"-------------------\n"
         return doc_repr
 
-
-class SplayNode:
-    """
-    SplayNode Class
-    ===============
-      - A node in the splay tree that wraps a document
-    """
-
-    def __init__(self, document: Document):
-        self.doc = document
-        self.left: Optional["SplayNode"] = None
-        self.right: Optional["SplayNode"] = None
-
-
-class SplayTree:
-    """
-    SplayTree Class
-    ===============
-      - Zig (single rotation when parent is root)
-      - Zig-Zig (two rotations when node and parent are both left or both right children of their parents)
-      - Zig-Zag (two rotations when node and parent are opposite-side children)
-    """
-
-    def __init__(self):
-        self.root: Optional[SplayNode] = None
-
-    def _right_rotate(self, x: SplayNode) -> SplayNode:
-        """
-        Right rotation around node x.
-
-        Before rotation:
-            x
-           / \
-          y  T3
-         / \
-        T1  T2
-
-        After rotation:
-            y
-           / \
-         T1   x
-             / \
-            T2  T3
-        """
-        # Perform right rotation
-        y = x.left
-
-        # Adjust pointers
-        x.left = y.right
-
-        # Complete rotation
-        y.right = x
-        return y
-
-    def _left_rotate(self, x: SplayNode) -> SplayNode:
-        """
-        Left rotation around node x.
-
-        Before rotation:
-            x
-           / \
-          T1  y
-             / \
-            T2  T3
-
-        After rotation:
-            y
-           / \
-          x   T3
-         / \
-        T1  T2
-        """
-        # Perform left rotation
-        y = x.right
-
-        # Adjust pointers
-        x.right = y.left
-
-        # Complete rotation
-        y.left = x
-        return y
-
-    def _splay(self, root: Optional[SplayNode], key: int) -> Optional[SplayNode]:
-        """
-        Bring the node with the given key to the root of the subtree.
-        """
-
-        # Base case where root is None or key is at root
-        if root is None or root.doc.doc_id == key:
-            return root
-
-        # Key lies in left subtree
-        if key < root.doc.doc_id:
-
-            # Key not found in left subtree
-            if root.left is None:
-                return root
-            
-            # Zig-Zig (Left Left): if node is on left of parent
-            if key < root.left.doc.doc_id:
-                root.left.left = self._splay(root.left.left, key)
-                root = self._right_rotate(root)
-
-            # Zig-Zag (Left Right): if node is on right of parent
-            elif key > root.left.doc.doc_id:
-                root.left.right = self._splay(root.left.right, key)
-                if root.left.right is not None:
-                    root.left = self._left_rotate(root.left)
-
-            # Final rotation brings the node upward
-            return self._right_rotate(root) if root.left else root
-
-        # Key lies in right subtree
-        else:
-
-            # Key not found in right subtree
-            if root.right is None:
-                return root
-            
-            # Zag-Zig (Right Left): if node is on left of parent
-            if key < root.right.doc.doc_id:
-                root.right.left = self._splay(root.right.left, key)
-                if root.right.left is not None:
-                    root.right = self._right_rotate(root.right)
-
-            # Zag-Zag (Right Right): if node is on right of parent
-            elif key > root.right.doc.doc_id:
-                root.right.right = self._splay(root.right.right, key)
-                root = self._left_rotate(root)
-
-            # Final rotation brings the node upward
-            return self._left_rotate(root) if root.right else root
-
-    def insert(self, doc: Document) -> bool:
-        """
-        Insert a Document into the tree.
-        Returns True if inserted, False if a document with the same id exists.
-        """
-
-        # Empty tree: new node becomes root without rotations
-        if self.root is None:
-            self.root = SplayNode(doc)
-            print(f"Inserted root: {doc.doc_id}")
-            return True
-
-        # Splay at the key
-        self.root = self._splay(self.root, doc.doc_id)
-        if self.root.doc.doc_id == doc.doc_id:
-            print(f"Document {doc.doc_id} already exists. Update or Search instead.")
-            return False
-
-        # Insert new node and reattach subtrees
-        node = SplayNode(doc)
-        if doc.doc_id < self.root.doc.doc_id:
-            node.right = self.root
-            node.left = self.root.left
-            self.root.left = None
-        else:
-            node.left = self.root
-            node.right = self.root.right
-            self.root.right = None
-        self.root = node
-
-        print(f"Inserted and Splayed to root: {doc.doc_id}")
-        return True
-
-    def search(self, doc_id: int) -> Optional[Document]:
-        """
-        Search for a document by id. If found, splay to root and return it.
-        Returns the Document instance or None if not found.
-        """
-
-        # If tree is empty nothing to do
-        if not self.root:
-            return None
-        
-        # Bring the nearest node with respect to doc_id to the root
-        self.root = self._splay(self.root, doc_id)
-        if self.root.doc.doc_id == doc_id:
-            print(f"\nFound and Splayed: {self.root.doc}")
-            return self.root.doc
-
-        # If the root key differs, the document does not exist
-        print("Document not found.")
-        return None
-
-    def update_status(self, doc_id: int, new_status: str) -> Optional[Document]:
-        """
-        Update the status field of the document and return it.
-        """
-        # Reuse search which splays the node if it exists
-        doc = self.search(doc_id)
-
-        # Update status if document found
-        if doc:
-            doc.status = new_status
-            print(f"Updated Status to '{new_status}' for Document {doc_id}")
-            return doc
-        return None
-
-    def delete(self, doc_id: int) -> bool:
-        """
-        Remove a document from the tree.
-        Returns True when a node was removed; False otherwise.
-        """
-
-        # If tree empty nothing to delete
-        if self.root is None:
-            return False
-        
-        # Splay the tree at doc_id if document found
-        self.root = self._splay(self.root, doc_id)
-        if self.root.doc.doc_id != doc_id:
-            print("Document not found, cannot delete.")
-            return False
-
-        # Delete the root node and re-attach subtrees
-        if self.root.left is None:
-            self.root = self.root.right
-        else:
-            temp = self.root.right
-            self.root = self.root.left
-            self.root = self._splay(self.root, doc_id)
-            self.root.right = temp
-        print(f"Deleted Document {doc_id}")
-        return True
-
-    def display_root(self) -> None:
-        """
-        Print a short representation of the current root (or empty).
-        """
-        if self.root:
-            print(f"Current Root: {self.root.doc}")
-        else:
-            print("Tree is empty.")
-
-
 class UniverifyApp:
     """
     Main Application Class
     ======================
-      - List, Search, Insert, Update, Delete documents in the splay tree
+      - List, Search, Insert, Update, Delete documents in the tree
     """
 
-    def __init__(self, data_dir: str = None):
+    def __init__(self, data_dir: str = None, tree_type: str = "splay"):
         """
-        Initialize data directory and splay tree
+        Initialize data directory and tree
         """
 
         # Set data directory (default: ./data)
         self.data_dir = data_dir or os.path.join(os.path.dirname(__file__), "data")
 
-        # Initialize the splay tree
-        self.tree = SplayTree()
+        # Initialize the chosen tree implementation
+        tt = (tree_type or "splay").lower()
+        if tt == "avl":
+            self.tree = avl.Tree()   # Use AVL tree
+        else:
+            self.tree = splay.Tree() # Use splay tree
 
     def _file_path(self, doc_id: int) -> str:
         """
@@ -408,7 +178,7 @@ class UniverifyApp:
         Choice 4: Update Document
         Update a document's status and save the changes.
         """
-        doc = self.tree.update_status(doc_id, status)
+        doc = self.tree.update(doc_id, status)
         if doc:
             try:
                 # Get file path
@@ -514,7 +284,15 @@ def main():
     """
     Main entry point for the Univerify application    
     """
-    app = UniverifyApp()
+
+    # Parse command line arguments
+    p = argparse.ArgumentParser()
+    p.add_argument("--data-dir", help="data directory to use")
+    p.add_argument("--tree", choices=["splay", "avl"], default="splay", help="Which tree to use (splay or avl)")
+    args = p.parse_args()
+
+    # Initialize and run the application
+    app = UniverifyApp(data_dir=args.data_dir, tree_type=args.tree)
     app.run()
 
 if __name__ == "__main__":
