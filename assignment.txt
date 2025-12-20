@@ -1,0 +1,13 @@
+Analysis Report (Practical Complexities):
+
+Compare your BST structure with other searching methods as specified in Table 1. Issues need to be considered in the report:
+
+i. Please take note of the insertion operation, because you add an item to the tree only if it is not already present, does the time required for an insertion increase? Discuss the issue in your analysis report.
+
+ii. Experiment with your search structure in random mode with a selected maximum input (justify the selection of the n input value) and determine the optimal tree order. Your report should include the insert and search times for a few of the tree orders experimented with.
+
+iii. Run your program (all solutions) in random mode for maximum input and tabulate the reported average insert and search times for each of the tree structures (one table for inserts, another for searches, or you may explore other tree operation).
+
+iv. Show these average times also using bar charts. For the tree codes or solutions, use the optimal tree order determined in ii
+
+v. Based on your experiments, what recommendations can you make about a good way to implement the problem whose expected size is the suggested maximum size?
