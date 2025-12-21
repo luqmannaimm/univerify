@@ -30,7 +30,7 @@ python univerify.py --data-dir mydata/
 To compare the performance of splay and AVL trees, use the benchmark script:
 
 ```sh
-python benchmark.py --n 1000 --searches 1000 --out simple_benchmark.png
+python benchmark.py --n-values 1000 10000 25000 50000 --trials 5 --searches 1000 --out-dir benchmarks
 ```
 
 - `--n` sets the number of documents to insert and search (default: 1000)
