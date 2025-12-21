@@ -10,7 +10,7 @@ import os
 import json
 import argparse
 from typing import List, Optional, Tuple
-from trees import splay, avl
+from trees import splay, avl, bst
 
 
 class Document:
@@ -74,8 +74,10 @@ class UniverifyApp:
         tt = (tree_type or "splay").lower()
         if tt == "avl":
             self.tree = avl.Tree()   # Use AVL tree
+        elif tt == "bst":
+            self.tree = bst.Tree()   # Use BST tree
         else:
-            self.tree = splay.Tree() # Use splay tree
+            self.tree = splay.Tree() # Use Splay tree
 
     def _file_path(self, doc_id: int) -> str:
         """

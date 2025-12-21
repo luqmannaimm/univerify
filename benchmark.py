@@ -2,10 +2,11 @@
 import time
 import random
 import argparse
+
 import matplotlib.pyplot as plt
 from univerify import Document
 from trees.splay import Tree as SplayTree
-from trees.avl import Tree as AVLTree
+from trees.bst import Tree as BSTTree
 
 def run(tree_cls, n, searches):
     """Run benchmark for given tree class, n inserts and searches"""
@@ -52,32 +53,31 @@ def main():
     import os
     os.makedirs(out_dir, exist_ok=True)
 
-    # Store aggregated results: dict[n] -> lists of trial results
     results = {}
     for n in n_values:
         print(f"Running n={n} with {trials} trials (searches={searches})...")
         splay_inserts = []
         splay_searches = []
-        avl_inserts = []
-        avl_searches = []
+        bst_inserts = []
+        bst_searches = []
         for t in range(trials):
             # seed for reproducibility across trials
             random.seed(1000 + t)
             si, ss = run(SplayTree, n, searches)
-            ai, as_ = run(AVLTree, n, searches)
+            bi, bs = run(BSTTree, n, searches)
             splay_inserts.append(si)
             splay_searches.append(ss)
-            avl_inserts.append(ai)
-            avl_searches.append(as_)
-            print(f"  trial {t+1}: splay_insert={si:.1f}μs splay_search={ss:.1f}μs | avl_insert={ai:.1f}μs avl_search={as_:.1f}μs")
+            bst_inserts.append(bi)
+            bst_searches.append(bs)
+            print(f"  trial {t+1}: splay_insert={si:.1f}μs splay_search={ss:.1f}μs | bst_insert={bi:.1f}μs bst_search={bs:.1f}μs")
         results[n] = {
             'splay_inserts': splay_inserts,
             'splay_searches': splay_searches,
-            'avl_inserts': avl_inserts,
-            'avl_searches': avl_searches,
+            'bst_inserts': bst_inserts,
+            'bst_searches': bst_searches,
         }
 
-        # For each n, plot per-run bars for insert and search (x=run, bars=AVL/Splay)
+        # For each n, plot per-run bars for insert and search (x=run, bars=BST/Splay)
         import statistics
         run_ids = [str(i+1) for i in range(trials)]
         x = range(trials)
@@ -85,7 +85,7 @@ def main():
         # Insert times per run
         plt.figure(figsize=(6,6))
         s_bars = plt.bar([i - width/2 for i in x], splay_inserts, width, label='splay')
-        a_bars = plt.bar([i + width/2 for i in x], avl_inserts, width, label='avl')
+        b_bars = plt.bar([i + width/2 for i in x], bst_inserts, width, label='bst')
         plt.xticks(x, run_ids)
         plt.xlabel('Run')
         plt.ylabel('avg insert time (μs/op)')
@@ -93,7 +93,7 @@ def main():
         plt.legend()
         for i, v in enumerate(splay_inserts):
             plt.text(i - width/2, v, f'{v:.0f}', ha='center', va='bottom')
-        for i, v in enumerate(avl_inserts):
+        for i, v in enumerate(bst_inserts):
             plt.text(i + width/2, v, f'{v:.0f}', ha='center', va='bottom')
         fn = os.path.join(out_dir, f'benchmark_n_{n}_inserts.png')
         plt.tight_layout()
@@ -104,7 +104,7 @@ def main():
         # Search times per run
         plt.figure(figsize=(6,6))
         s_bars = plt.bar([i - width/2 for i in x], splay_searches, width, label='splay')
-        a_bars = plt.bar([i + width/2 for i in x], avl_searches, width, label='avl')
+        b_bars = plt.bar([i + width/2 for i in x], bst_searches, width, label='bst')
         plt.xticks(x, run_ids)
         plt.xlabel('Run')
         plt.ylabel('avg search time (μs/op)')
@@ -112,7 +112,7 @@ def main():
         plt.legend()
         for i, v in enumerate(splay_searches):
             plt.text(i - width/2, v, f'{v:.0f}', ha='center', va='bottom')
-        for i, v in enumerate(avl_searches):
+        for i, v in enumerate(bst_searches):
             plt.text(i + width/2, v, f'{v:.0f}', ha='center', va='bottom')
         fn = os.path.join(out_dir, f'benchmark_n_{n}_searches.png')
         plt.tight_layout()
@@ -123,15 +123,15 @@ def main():
     # Trend plot across n_values: grouped bars for inserts and searches
     import statistics
     si_means = [statistics.mean(results[n]['splay_inserts']) for n in n_values]
-    ai_means = [statistics.mean(results[n]['avl_inserts']) for n in n_values]
+    bi_means = [statistics.mean(results[n]['bst_inserts']) for n in n_values]
     ss_means = [statistics.mean(results[n]['splay_searches']) for n in n_values]
-    as_means = [statistics.mean(results[n]['avl_searches']) for n in n_values]
+    bs_means = [statistics.mean(results[n]['bst_searches']) for n in n_values]
 
     # Plot inserts trend as line plot
     x = range(len(n_values))
     plt.figure(figsize=(8,8))
     plt.plot(x, si_means, marker='o', label='splay insert')
-    plt.plot(x, ai_means, marker='o', label='avl insert')
+    plt.plot(x, bi_means, marker='o', label='bst insert')
     plt.xticks(x, [str(n) for n in n_values])
     plt.xlabel('n')
     plt.ylabel('avg insert time (μs/op)')
@@ -139,7 +139,7 @@ def main():
     plt.legend()
     for i, v in enumerate(si_means):
         plt.text(i, v, f'{v:.0f}', ha='center', va='bottom')
-    for i, v in enumerate(ai_means):
+    for i, v in enumerate(bi_means):
         plt.text(i, v, f'{v:.0f}', ha='center', va='bottom')
     fn = os.path.join(out_dir, 'trend_inserts.png')
     plt.tight_layout()
@@ -150,7 +150,7 @@ def main():
     # Plot searches trend as line plot
     plt.figure(figsize=(8,8))
     plt.plot(x, ss_means, marker='o', label='splay search')
-    plt.plot(x, as_means, marker='o', label='avl search')
+    plt.plot(x, bs_means, marker='o', label='bst search')
     plt.xticks(x, [str(n) for n in n_values])
     plt.xlabel('n')
     plt.ylabel('avg search time (μs/op)')
@@ -158,7 +158,7 @@ def main():
     plt.legend()
     for i, v in enumerate(ss_means):
         plt.text(i, v, f'{v:.0f}', ha='center', va='bottom')
-    for i, v in enumerate(as_means):
+    for i, v in enumerate(bs_means):
         plt.text(i, v, f'{v:.0f}', ha='center', va='bottom')
     fn = os.path.join(out_dir, 'trend_searches.png')
     plt.tight_layout()
@@ -174,18 +174,19 @@ def main():
     # Write average insert times
     with open(insert_csv, 'w', newline='') as f:
         writer = csv.writer(f)
-        writer.writerow(['n', 'Splay', 'AVL'])
+        writer.writerow(['n', 'Splay', 'BST'])
         for i, n in enumerate(n_values):
-            writer.writerow([n, f"{si_means[i]:.1f}", f"{ai_means[i]:.1f}"])
+            writer.writerow([n, f"{si_means[i]:.1f}", f"{bi_means[i]:.1f}"])
     print(f"Saved insert averages to {insert_csv}")
 
     # Write average search times
     with open(search_csv, 'w', newline='') as f:
         writer = csv.writer(f)
-        writer.writerow(['n', 'Splay', 'AVL'])
+        writer.writerow(['n', 'Splay', 'BST'])
         for i, n in enumerate(n_values):
-            writer.writerow([n, f"{ss_means[i]:.1f}", f"{as_means[i]:.1f}"])
+            writer.writerow([n, f"{ss_means[i]:.1f}", f"{bs_means[i]:.1f}"])
     print(f"Saved search averages to {search_csv}")
+
 
 if __name__ == '__main__':
     main()
