@@ -8,13 +8,18 @@ from univerify import Document
 from trees.splay import Tree as SplayTree
 from trees.bst import Tree as BSTTree
 
-def run(tree_cls, n, searches):
-    """Run benchmark for given tree class, n inserts and searches"""
+def run(tree_cls, n, searches, mode):
+    """Run benchmark for given tree class, n inserts and searches, with order mode"""
 
-    # Generate documents
-    ids = random.sample(range(1, 10*n), n)
+    # Generate document IDs
+    if mode == 'random':
+        ids = random.sample(range(1, 10*n), n)
+    else:
+        ids = list(range(1, n+1))
+        if mode == 'reverse':
+            ids = list(reversed(ids))
     docs = [Document(i, f"A{i}", "pdf") for i in ids]
-    
+
     # Insert documents
     tree = tree_cls()
     t0 = time.perf_counter()
@@ -22,7 +27,7 @@ def run(tree_cls, n, searches):
         tree.insert(d)
     t1 = time.perf_counter()
     insert_time = t1 - t0
-    
+
     # Search documents
     search_keys = [random.choice(ids) for _ in range(searches)]
     t0 = time.perf_counter()
@@ -43,19 +48,21 @@ def main():
     parser.add_argument('--trials', type=int, default=5, help='Number of trials per n')
     parser.add_argument('--searches', type=int, default=1000, help='Number of searches per trial')
     parser.add_argument('--out-dir', default='benchmarks', help='Output directory for charts')
+    parser.add_argument('--mode', choices=['random', 'sorted', 'reverse'], default='random', help='Order of insert: random, sorted, or reverse')
     args = parser.parse_args()
 
     n_values = args.n_values
     trials = args.trials
     searches = args.searches
     out_dir = args.out_dir
+    mode = args.mode
 
     import os
     os.makedirs(out_dir, exist_ok=True)
 
     results = {}
     for n in n_values:
-        print(f"Running n={n} with {trials} trials (searches={searches})...")
+        print(f"Running n={n} with {trials} trials (searches={searches}), mode={mode}...")
         splay_inserts = []
         splay_searches = []
         bst_inserts = []
@@ -63,8 +70,8 @@ def main():
         for t in range(trials):
             # seed for reproducibility across trials
             random.seed(1000 + t)
-            si, ss = run(SplayTree, n, searches)
-            bi, bs = run(BSTTree, n, searches)
+            si, ss = run(SplayTree, n, searches, mode)
+            bi, bs = run(BSTTree, n, searches, mode)
             splay_inserts.append(si)
             splay_searches.append(ss)
             bst_inserts.append(bi)
