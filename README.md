@@ -15,9 +15,9 @@ Splay:
 python univerify.py --tree splay
 ```
 
-AVL:
+BST:
 ```sh
-python univerify.py --tree avl
+python univerify.py --tree bst
 ```
 
 You can also specify a custom data directory:
@@ -26,11 +26,11 @@ You can also specify a custom data directory:
 python univerify.py --data-dir mydata/
 ```
 
-### Benchmarking Splay vs AVL
-To compare the performance of splay and AVL trees, use the benchmark script:
+### Benchmarking
+To compare the performance of splay and BST, use the benchmark script:
 
 ```sh
-python benchmark.py --n-values 1000 10000 25000 50000 --trials 5 --searches 1000 --out-dir benchmarks
+python .\benchmark.py --n-values 100 250 500 750 --trials 5 --searches 1000 --mode all --out-dir benchmarks_all
 ```
 
 - `--n` sets the number of documents to insert and search (default: 1000)
