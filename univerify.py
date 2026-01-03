@@ -290,7 +290,7 @@ def main():
     # Parse command line arguments
     p = argparse.ArgumentParser()
     p.add_argument("--data-dir", help="data directory to use")
-    p.add_argument("--tree", choices=["splay", "avl"], default="splay", help="Which tree to use (splay or avl)")
+    p.add_argument("--tree", choices=["splay", "avl", "bst"], default="splay", help="Which tree to use (splay, avl, bst)")
     args = p.parse_args()
 
     # Initialize and run the application
